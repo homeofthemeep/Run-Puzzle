@@ -27,6 +27,22 @@ kernel.fragment =  [[
 graphics.defineEffect(kernel)
 
 
+local kernel2 = {category = "filter", name = "uv_scroll2"}
+
+kernel2.isTimeDependent = true
+
+kernel2.fragment =  [[
+	P_COLOR vec4 FragmentKernel (P_UV vec2 uv)
+	{
+		uv.y -= (CoronaTotalTime/2.25);
+		return texture2D(CoronaSampler0, uv);
+	}
+
+]]
+
+graphics.defineEffect(kernel)
+graphics.defineEffect(kernel2)
+
 display.setDefault( "textureWrapX", "repeat" )
 display.setDefault( "textureWrapY", "repeat" )
 
@@ -95,9 +111,10 @@ local sequenceData =
     loopDirection = "forward"    -- Optional ; values include "forward" or "bounce"
 }
 -- Add these images in
+local imgBG = display.newImage("sbackground.png", 0,0, display.contentWidth, display.contentHeight)
+local imgFade = display.newImage("fade.png", 0 , 0, display.contentWidth, display.contentHeight)
 local gfxTest =  graphics.newImageSheet("path_long.png", gfxTestOptions)
 local gfxRunner = graphics.newImageSheet("spritesheet_run.png",gfxRunnerOptions )
-
 local imgGround = display.newImage(gfxTest, 1)
 --local imgFlub = display.newImage(gfxTest, 1)
 --local imgFlerb = display.newImage(gfxTest, 1)
@@ -118,6 +135,8 @@ physics.addBody(spriteRunner, "dynamic", {friction = 0.5, bounce = 0.0})
 -- ability to hide some of it away, so it does not clutter up the code
 function funcInit()
 	-- Mostly this sets up the ground texture to look angled and ready to for shader processing 
+	imgBG.fill.effect = "filter.custom.uv_scroll2"
+
 	imgGround.x = display.contentCenterX
 	imgGround.y = display.contentCenterY	- 64
 	imgGround:scale(0.5,0.5)
