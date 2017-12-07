@@ -40,8 +40,25 @@ kernel2.fragment =  [[
 
 ]]
 
+local kernel3 = {category = "filter", name = "uv_scroll3"}
+
+kernel3.isTimeDependent = true
+
+kernel3.fragment =  [[
+	P_COLOR vec4 FragmentKernel (P_UV vec2 uv)
+	{
+		uv.y -= (CoronaTotalTime/4.0);
+		uv.x -= sin(CoronaTotalTime*1.0)/4.0;
+		P_COLOR vec4 texColor = texture2D( CoronaSampler0, uv);
+		texColor.a = 0.75;
+		return CoronaColorScale( texColor );
+	}
+
+]]
+
 graphics.defineEffect(kernel)
 graphics.defineEffect(kernel2)
+graphics.defineEffect(kernel3)
 
 display.setDefault( "textureWrapX", "repeat" )
 display.setDefault( "textureWrapY", "repeat" )
@@ -126,10 +143,16 @@ local sequenceData =
 }
 -- Add these images in
 local imgBG = display.newImage("sbackground.png", 0,0, display.contentWidth, display.contentHeight)
+
 local imgFade = display.newImage("fade.png", 0 , 0, display.contentWidth, display.contentHeight)
+
 local gfxTest =  graphics.newImageSheet("path_long.png", gfxTestOptions)
+
 local gfxRunner = graphics.newImageSheet("spritesheet_run.png",gfxRunnerOptions )
+
 local imgGround = display.newImage(gfxTest, 1)
+
+local imgClouds = display.newImage("clouds_t.png", display.contentCenterX, display.contentCenterY - 64)
 --local imgFlub = display.newImage(gfxTest, 1)
 --local imgFlerb = display.newImage(gfxTest, 1)
 
@@ -166,6 +189,18 @@ function funcInit()
 	imgGround.path.y4 = imgGround.path.y4 + 256
 
 	imgGround.fill.effect = "filter.custom.uv_scroll"
+
+	imgClouds:scale(0.5,0.5)
+
+	imgClouds.path.x1 = imgClouds.path.x1 + 192
+	imgClouds.path.x4 = imgClouds.path.x4 - 192
+	imgClouds.path.y1 = imgClouds.path.y1 + 256
+	imgClouds.path.y4 = imgClouds.path.y4 + 256
+
+	--imgClouds.alpha = 0.25
+	
+
+	imgClouds.fill.effect = "filter.custom.uv_scroll3"
 
 end
 
