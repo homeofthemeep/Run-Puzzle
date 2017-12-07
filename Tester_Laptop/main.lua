@@ -52,11 +52,24 @@ local function preCollisionEvent( self, event )
    local collideObject = event.other
    if (self ~= nil or event.other ~= nil) then
 	   if ( self.collType == "noCollide" ) then
-	      event.contact.isEnabled = false  -- Disable this specific collision
+	   		if (event.contact ~= nil) then
+	      		event.contact.isEnabled = false  -- Disable this specific collision
+	      	end
 	   end
 	end
 end
 
+local function preCollisionEvent2( self, event )
+ 
+   local collideObject = event.other
+   if (self ~= nil or event.other ~= nil) then
+	   if ( self.collType == "noCollide" ) then
+	   		if (event.contact ~= nil) then
+	      		event.contact.isEnabled = false  -- Disable this specific collision
+	      	end
+	   end
+	end
+end
 
 local score = 0
 
@@ -67,16 +80,17 @@ local score = 0
 local floorRect = display.newRect(display.contentCenterX, display.contentCenterY + 35, 300, 1)
 floorRect.isVisible = false
 -- fullscreenRect will be the rectangle that the player interacts with to make their character jump
-local fullscreenRect = display.newRect(0,0, display.contentWidth*2, display.contentHeight*2)
-fullscreenRect.isVisible = false
+--local fullscreenRect = display.newRect(0,0, display.contentWidth*2, display.contentHeight*2)
+--fullscreenRect.isVisible = false
 
 -- Setup for the fullscreen rectangle
-physics.addBody(fullscreenRect, "static", {friction = 0.5, bounce = 0.0})
-fullscreenRect.collType = "noCollide"
-fullscreenRect.preCollision = preCollisionEvent
-fullscreenRect:addEventListener("preCollision", fullscreenRect)
+--physics.addBody(fullscreenRect, "static", {friction = 0.5, bounce = 0.0})
+--fullscreenRect.collType = "noCollide"
+--fullscreenRect.preCollision = preCollisionEvent
+--fullscreenRect:addEventListener("preCollision", fullscreenRect)
 -- Setup for the floor rectangle
 physics.addBody(floorRect, "static", {friction = 0.5, bounce = 0.0})
+floorRect.myName = "floor"
 
 -- Setup options for imgGround texture, player's spritesheet, and the sequence for the player's running animation
 local gfxTestOptions =
@@ -125,11 +139,16 @@ spriteRunner.x = display.contentCenterX
 spriteRunner.y = display.contentCenterY	
 spriteRunner:play()
 
-
---local spriteBox = display.newRect(spriteRunner.x,spriteRunner.y,33,84)
+local puzPiece1 = display.newRect(spriteRunner.x, spriteRunner.y, 32, 32)
+local bInFlight = false
 
 -- Make the character interact with "physics" objects
 physics.addBody(spriteRunner, "dynamic", {friction = 0.5, bounce = 0.0})
+
+spriteRunner.myName = "Runner"
+
+--physics.addBody(puzPiece1, "dyanmic", {friction = 0.5, bounce = 0.0})
+--puzPiece1.myName = "puzzle piece"
 
 -- The purpose of funcInit() is to initialize a lot of variable and set them up to my desired effect with the
 -- ability to hide some of it away, so it does not clutter up the code
@@ -148,69 +167,91 @@ function funcInit()
 
 	imgGround.fill.effect = "filter.custom.uv_scroll"
 
-	--[[
-	imgFlub.x = display.contentCenterX
-	imgFlub.y = display.contentCenterY	- 64
-	imgFlub:scale(0.5,0.5)
-
-	imgFlub.path.x1 = imgFlub.path.x1 + 192
-	imgFlub.path.x4 = imgFlub.path.x4 - 192
-	imgFlub.path.y1 = imgFlub.path.y1 + 256
-	imgFlub.path.y4 = imgFlub.path.y4 + 256 
-	--]]
-	--[[
-	imgFlub.x = display.contentCenterX
-	imgFlub.y = display.contentCenterY	- 64
-	imgFlub:scale(0.5,0.5)
-
-	imgFlub.path.x1 = imgFlub.path.x1 + 0
-	imgFlub.path.x2 = imgFlub.path.x2 - 320
-	imgFlub.path.x3 = imgFlub.path.x3 + 320
-	--imgFlub.path.x4 = imgFlub.path.x4 - 320
-	imgFlub.path.y1 = imgFlub.path.y1 + 256
-	imgFlub.path.y4 = imgFlub.path.y4 + 256
-	--]]
 end
 
 -- This bReleased is a boolean that determines whether or not 
 local bReleased = true
+local bGrounded = false
 
 -- this funciton handles touch events
 function funcTouch(event)
 	
 	--local anchorY = event.y
 
+	local swipeLengthY = event.yStart - event.y
+	local swipeLengthX = event.xStart - event.x
+
 	if (event.phase == "began") then
 		--if the touch has just begun we create a joint where the user clicked (coordinates of our finger)
-		fullscreenControl = physics.newJoint("touch", fullscreenRect, event.x, event.y)
+		--fullscreenControl = physics.newJoint("touch", fullscreenRect, event.x, event.y)
 		return true
 	elseif (event.phase == "moved") then
 		--if the touch is moving then we update the coordinates of our touch...
 		--so the box follows our finger as it moves
-		if (bReleased == true) then
-			print("Reached ")
-			spriteRunner:applyForce(0,-10,spriteRunner.x, spriteRunner.y)
-			bReleased = false
+		if(swipeLengthY > 0) then
+			if (bReleased == true) then
+				if (bGrounded == true) then
+					
+					spriteRunner:applyForce(0,-15,spriteRunner.x, spriteRunner.y)
+					bReleased = false
+				end
+			end
 		end
 		return true
 	elseif (event.phase == "ended" or event.phase == "cancelled") then
 		--If the touch joing has eneded or is cancelled then we remove the joint
-		fullscreenControl:removeSelf()
-		fullscreenControl = nil
+		--fullscreenControl:removeSelf()
+		--fullscreenControl = nil
 		bReleased = true
+		if(swipeLengthY < 0) then
+			
+			
+			
+			
+			puzPiece1.y = puzPiece1.y -84
+			physics.addBody(puzPiece1, "dyanmic", {friction = 0.5, bounce = 0.0})
+			puzPiece1.myName = "puzzle piece"
+			puzPiece1:applyForce(puzPiece1.x, puzPiece1.y)
+		end
 		return false
 	end
 end
 
 
-local function funcTester(event)
+local function funcCollision(self, event)
 
-	
+	if (event.phase == "began") then
+		if(event.other.myName == "floor") then
+			bGrounded = true
+		end
+		if((self.myName == "puzzle piece" and event.other.myName == "Runner") or (self.myName == "Runner" and event.other.myName == "puzzle piece")) then
+			event.contact.isEnabled = false
+		end
+	end
+	if (event.phase == "ended") then
+		if(event.other ~= nil) then
+			if(event.other.myName == "floor") then
+				bGrounded = false
+			end
+		end
+	end
+end
+
+local function funcTester(event)
+	--print(bGrounded)
+	if(inFlight == false) then
+		puzPiece1.x = spriteRunner.x
+		puzPiece1.y = spriteRunner.y
+	end
+
 end
 
 
 
 
 funcInit()
+
+spriteRunner.collision = funcCollision
+spriteRunner:addEventListener("collision")
 Runtime:addEventListener("touch", funcTouch)
 Runtime:addEventListener("enterFrame", funcTester)
