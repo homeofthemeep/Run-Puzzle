@@ -7,76 +7,16 @@ display.setStatusBar(display.HiddenStatusBar)
 -- Your code here
 
 local physics = require("physics")
+local kernelSetup = require("kernelSetup")
+
 physics.start()
 --physics.setDrawMode("hybrid")
 physics.setGravity(0,10)
 
-local kernel = {category = "filter", name = "uv_scroll"}
-
-kernel.isTimeDependent = true
-
-kernel.fragment =  [[
-	P_COLOR vec4 FragmentKernel (P_UV vec2 uv)
-	{
-		uv.y -= (CoronaTotalTime/2.0);
-		return texture2D(CoronaSampler0, uv);
-	}
-
-]]
-
-graphics.defineEffect(kernel)
-
-
-local kernel2 = {category = "filter", name = "uv_scroll2"}
-
-kernel2.isTimeDependent = true
-
-kernel2.fragment =  [[
-	P_COLOR vec4 FragmentKernel (P_UV vec2 uv)
-	{
-		uv.y -= (CoronaTotalTime/2.25);
-		return texture2D(CoronaSampler0, uv);
-	}
-
-]]
-
-local kernel3 = {category = "filter", name = "uv_scroll3"}
-
-kernel3.isTimeDependent = true
-
-kernel3.fragment =  [[
-	P_COLOR vec4 FragmentKernel (P_UV vec2 uv)
-	{
-		uv.y -= (CoronaTotalTime/4.0);
-		uv.x -= sin(CoronaTotalTime*1.0)/4.0;
-		P_COLOR vec4 texColor = texture2D( CoronaSampler0, uv);
-		texColor.a = 0.75;
-		return CoronaColorScale( texColor );
-	}
-
-]]
-
-graphics.defineEffect(kernel)
-graphics.defineEffect(kernel2)
-graphics.defineEffect(kernel3)
-
-display.setDefault( "textureWrapX", "repeat" )
-display.setDefault( "textureWrapY", "repeat" )
+kernelSetup.funcInit()
 
 
 local function preCollisionEvent( self, event )
- 
-   local collideObject = event.other
-   if (self ~= nil or event.other ~= nil) then
-	   if ( self.collType == "noCollide" ) then
-	   		if (event.contact ~= nil) then
-	      		event.contact.isEnabled = false  -- Disable this specific collision
-	      	end
-	   end
-	end
-end
-
-local function preCollisionEvent2( self, event )
  
    local collideObject = event.other
    if (self ~= nil or event.other ~= nil) then
@@ -96,21 +36,13 @@ local score = 0
 -- floorRect will be the collidable floor that the player interacts with
 local floorRect = display.newRect(display.contentCenterX, display.contentCenterY + 35, 300, 1)
 floorRect.isVisible = false
--- fullscreenRect will be the rectangle that the player interacts with to make their character jump
---local fullscreenRect = display.newRect(0,0, display.contentWidth*2, display.contentHeight*2)
---fullscreenRect.isVisible = false
 
--- Setup for the fullscreen rectangle
---physics.addBody(fullscreenRect, "static", {friction = 0.5, bounce = 0.0})
---fullscreenRect.collType = "noCollide"
---fullscreenRect.preCollision = preCollisionEvent
---fullscreenRect:addEventListener("preCollision", fullscreenRect)
 -- Setup for the floor rectangle
 physics.addBody(floorRect, "static", {friction = 0.5, bounce = 0.0})
 floorRect.myName = "floor"
 
 -- Setup options for imgGround texture, player's spritesheet, and the sequence for the player's running animation
-local gfxTestOptions =
+local gfxRoadOptions =
 {
     --required parameters
     width = 512,
@@ -146,11 +78,11 @@ local imgBG = display.newImage("sbackground.png", 0,0, display.contentWidth, dis
 
 local imgFade = display.newImage("fade.png", 0 , 0, display.contentWidth, display.contentHeight)
 
-local gfxTest =  graphics.newImageSheet("path_long.png", gfxTestOptions)
+local gfxRoad =  graphics.newImageSheet("path_long.png", gfxRoadOptions)
 
 local gfxRunner = graphics.newImageSheet("spritesheet_run.png",gfxRunnerOptions )
 
-local imgGround = display.newImage(gfxTest, 1)
+local imgGround = display.newImage(gfxRoad, 1)
 
 local imgClouds = display.newImage("clouds_t.png", display.contentCenterX, display.contentCenterY - 64)
 --local imgFlub = display.newImage(gfxTest, 1)
@@ -216,6 +148,29 @@ function funcTouch(event)
 	local swipeLengthY = event.yStart - event.y
 	local swipeLengthX = event.xStart - event.x
 
+	local xNorm = 0.0
+	local yNorm = 0.0
+
+	if (math.abs(swipeLengthX) > math.abs(swipeLengthY)) then
+		if(swipeLengthX < 0) then
+			xNorm = -1.0
+			yNorm = swipeLengthY/math.abs(swipeLengthX)
+		else
+			xNorm = 1.0
+			yNorm = swipeLengthY/math.abs(swipeLengthX)
+		end
+	else
+		if(swipeLengthY < 0) then
+			yNorm = -1.0
+			xorm = swipeLengthX/math.abs(swipeLengthY)
+		else
+			yNorm = 1.0
+			xNorm = swipeLengthX/math.abs(swipeLengthY)
+		end
+	end
+
+
+
 	if (event.phase == "began") then
 		--if the touch has just begun we create a joint where the user clicked (coordinates of our finger)
 		--fullscreenControl = physics.newJoint("touch", fullscreenRect, event.x, event.y)
@@ -238,15 +193,15 @@ function funcTouch(event)
 		--fullscreenControl:removeSelf()
 		--fullscreenControl = nil
 		bReleased = true
-		if(swipeLengthY < 0) then
+		if(swipeLengthY < 10) then
 			
 			
 			
-			
-			puzPiece1.y = puzPiece1.y -84
+			bInFlight =  true
+			puzPiece1.y = spriteRunner.y -84
 			physics.addBody(puzPiece1, "dyanmic", {friction = 0.5, bounce = 0.0})
 			puzPiece1.myName = "puzzle piece"
-			puzPiece1:applyForce(puzPiece1.x, puzPiece1.y)
+			puzPiece1:applyForce(5*xNorm, 5*yNorm, puzPiece1.x, puzPiece1.y)
 		end
 		return false
 	end
@@ -274,9 +229,11 @@ end
 
 local function funcTester(event)
 	--print(bGrounded)
-	if(inFlight == false) then
+	if(bInFlight == false) then
 		puzPiece1.x = spriteRunner.x
 		puzPiece1.y = spriteRunner.y
+	elseif(bInFlight == true) then 
+		puzPiece1:scale(0.99,0.99)
 	end
 
 end
