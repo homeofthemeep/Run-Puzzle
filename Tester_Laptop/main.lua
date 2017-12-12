@@ -85,6 +85,8 @@ local gfxRunner = graphics.newImageSheet("spritesheet_run.png",gfxRunnerOptions 
 local imgGround = display.newImage(gfxRoad, 1)
 
 local imgClouds = display.newImage("clouds_t.png", display.contentCenterX, display.contentCenterY - 64)
+local imgClouds2 = display.newImage("clouds_t.png", display.contentCenterX, display.contentCenterY - 64)
+local imgClouds3 = display.newImage("clouds_t.png", display.contentCenterX, display.contentCenterY - 64)
 --local imgFlub = display.newImage(gfxTest, 1)
 --local imgFlerb = display.newImage(gfxTest, 1)
 
@@ -130,9 +132,32 @@ function funcInit()
 	imgClouds.path.y4 = imgClouds.path.y4 + 256
 
 	--imgClouds.alpha = 0.25
+	imgClouds.fill.effect = "filter.custom.uv_scroll3"
 	
 
-	imgClouds.fill.effect = "filter.custom.uv_scroll3"
+	imgClouds2:scale(0.5,0.5)
+
+	imgClouds2.path.x1 = imgClouds.path.x1 + 192
+	imgClouds2.path.x4 = imgClouds.path.x4 - 192
+	imgClouds2.path.y1 = imgClouds.path.y1 + 256
+	imgClouds2.path.y4 = imgClouds.path.y4 + 256
+
+	--imgClouds.alpha = 0.25
+	
+
+	imgClouds3.fill.effect = "filter.custom.uv_scroll4"
+
+	imgClouds3:scale(0.5,0.5)
+
+	imgClouds3.path.x1 = imgClouds.path.x1 + 192
+	imgClouds3.path.x4 = imgClouds.path.x4 - 192
+	imgClouds3.path.y1 = imgClouds.path.y1 + 256
+	imgClouds3.path.y4 = imgClouds.path.y4 + 256
+
+	--imgClouds.alpha = 0.25
+	
+
+	imgClouds3.fill.effect = "filter.custom.uv_scroll5"
 
 end
 
