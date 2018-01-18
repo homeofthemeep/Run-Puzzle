@@ -19,8 +19,9 @@ kernelSetup.funcInit()
 local function preCollisionEvent( self, event )
  
    local collideObject = event.other
+
    if (self ~= nil or event.other ~= nil) then
-	   if ( self.collType == "noCollide" ) then
+	   if ( self.collType == "noCollide" ) or (event.other.collType == "noCollide") then
 	   		if (event.contact ~= nil) then
 	      		event.contact.isEnabled = false  -- Disable this specific collision
 	      	end
@@ -108,9 +109,7 @@ spriteRunner:play()
 
 
 local puzPiece1 = display.newRect(spriteRunner.x, spriteRunner.y, 32, 32)
-local puzPiece1Coll = display.newRect(puzPiece1.x, puzPiece1.y, 32, 32)
 local puzPiece1z = 0
-puzPiece1Coll.isVisible = false
 local bInFlight = false
 --physics.addBody(puzPiece1Coll, "dyanmic", {friction = 0.5, bounce = 0.5})
 --puzPiece1Coll.myName = "puzzle piece"
@@ -121,12 +120,13 @@ local bInFlight = false
 local basket = display.newRect(display.contentCenterX, display.contentCenterY*.5, 16,16)
 physics.addBody(basket, "static")
 basket.myName = "basket"
+basket.isSensor = true
 
 
 
 -- Make the character interact with "physics" objects
 physics.addBody(spriteRunner, "dynamic", {friction = 0.5, bounce = 0.0})
-
+spriteRunner.isFixedRotation = true
 spriteRunner.myName = "Runner"
 
 --physics.addBody(puzPiece1, "dyanmic", {friction = 0.5, bounce = 0.0})
@@ -255,7 +255,7 @@ function funcTouch(event)
 			puzPiece1.y = spriteRunner.y -84
 			physics.addBody(puzPiece1, "dyanmic", {friction = 0.5, bounce = 0.0})
 			puzPiece1.myName = "puzzle piece"
-
+			puzPiece1.isSensor = true
 			--physics.addBody(puzPiece1Coll, "dyanmic", {friction = 0.5, bounce = 0.5})
 			puzPiece1:applyForce(5*xNorm, 5*yNorm, puzPiece1.x, puzPiece1.y)
 		end
@@ -265,7 +265,6 @@ end
 
 
 local function funcCollision(self, event)
-
 	if (event.phase == "began") then
 		if(event.other.myName == "floor") then
 			bGrounded = true
@@ -274,12 +273,11 @@ local function funcCollision(self, event)
 			event.contact.isEnabled = false
 		end
 		print(self.myName .. " and " .. event.other.myName .. " has collidded and depth of piece is: " .. puzPiece1z)
-		if(self.myName == "puzzle piece" and event.other.myName == "basket") or (self.myName == "basket" and event.other.myName == "puzzle piece")then
-			event.contact.isEnabled = false
-		elseif(self.myName == "puzzle piece" and event.other.myName == "basket" and  puzPiece1z >= .6) or (self.myName == "basket" and event.other.myName == "puzzle piece" and  puzPiece1z >= .6)then
+		if(self.myName == "puzzle piece" and event.other.myName == "basket" and  puzPiece1z >= .6) or (self.myName == "basket" and event.other.myName == "puzzle piece" and  puzPiece1z >= .6)then
 			physics.removeBody(puzPiece1)
 			puzPiece1.isVisible = false
 			score = score + 10
+			print(score)
 		end
 
 	end
@@ -292,6 +290,8 @@ local function funcCollision(self, event)
 	end
 end
 
+--local totalTime = 0
+
 local function funcTester(event)
 	--print(bGrounded)
 	if(bInFlight == false) then
@@ -302,14 +302,16 @@ local function funcTester(event)
 		puzPiece1z = puzPiece1z + 0.01
 	end
 
-	puzPiece1Coll.x = puzPiece1.x
-	puzPiece1Coll.y = puzPiece1.y
+	spriteRunner.x = display.contentCenterX + (90 * math.sin(event.time/1000))
+
 
 end
 
 
 local function funcAccelerate( event )
-    print( event.xGravity)
+	totalTime = totalTime + event.deltaTime
+    --print( event.xGravity)
+    event.xGravity = math.sin(totalTime)
     spriteRunner.x = display.contentCenterX + (270 * event.xGravity)
 
 end
@@ -322,6 +324,7 @@ spriteRunner.collision = funcCollision
 spriteRunner:addEventListener("collision")
 basket.collision = funcCollision
 basket:addEventListener("collision")
+
 Runtime:addEventListener("touch", funcTouch)
 Runtime:addEventListener("enterFrame", funcTester)
 Runtime:addEventListener( "accelerometer", funcAccelerate )
