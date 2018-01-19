@@ -2,7 +2,7 @@ local kernelSetup =  {}
 print("reached kernelSetup")
 
 local function funcInit()
-	print("Reached funcINit")
+	print("Reached funcInit")
 	local kernel = {category = "filter", name = "uv_scroll"}
 
 	kernel.isTimeDependent = true

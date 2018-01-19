@@ -7,27 +7,15 @@ display.setStatusBar(display.HiddenStatusBar)
 -- Your code here
 
 local physics = require("physics")
+--local transistion = require("transistion")
 local kernelSetup = require("kernelSetup")
 
 physics.start()
---physics.setDrawMode("hybrid")
+physics.setDrawMode("hybrid")
 physics.setGravity(0,10)
 
 kernelSetup.funcInit()
 
-
-local function preCollisionEvent( self, event )
- 
-   local collideObject = event.other
-
-   if (self ~= nil or event.other ~= nil) then
-	   if ( self.collType == "noCollide" ) or (event.other.collType == "noCollide") then
-	   		if (event.contact ~= nil) then
-	      		event.contact.isEnabled = false  -- Disable this specific collision
-	      	end
-	   end
-	end
-end
 
 local score = 0
 
@@ -70,12 +58,40 @@ local sequenceData =
     name="walking",
     start=1,
     count=10,
-    time=400,
+    time=500,
     loopCount = 0,   -- Optional ; default is 0 (loop indefinitely)
     loopDirection = "forward"    -- Optional ; values include "forward" or "bounce"
 }
 
+local gfxBasketOptions = 
+{
+	width = 16,
+	height = 24,
+	numFrames = 5,
 
+	sheetContentHeight = 24,
+	sheetContentWidth = 80
+}
+
+local basketIdle =
+{
+    name="idle",
+    start=1,
+    count=1,
+    time=1,
+    loopCount = 0,   -- Optional ; default is 0 (loop indefinitely)
+    loopDirection = "forward"    -- Optional ; values include "forward" or "bounce"
+}
+
+local basketChew = 
+{
+    name="chewing",
+    start=2,
+    count=4,
+    time=500,
+    loopCount = 2,   -- Optional ; default is 0 (loop indefinitely)
+    loopDirection = "forward"    -- Optional ; values include "forward" or "bounce"
+}
 
 -- Add these images in
 local imgBG = display.newImage("sbackground.png", 0,0, display.contentWidth, display.contentHeight)
@@ -86,6 +102,11 @@ local gfxRoad =  graphics.newImageSheet("path_long.png", gfxRoadOptions)
 
 local gfxRunner = graphics.newImageSheet("runnersheet.png",gfxRunnerOptions )
 
+local gfxRedBasket = graphics.newImageSheet("chewsheet_r.png", gfxBasketOptions)
+local gfxGreenBasket = graphics.newImageSheet("chewsheet_g.png", gfxBasketOptions)
+local gfxBlueBasket = graphics.newImageSheet("chewsheet_b.png", gfxBasketOptions)
+
+
 local imgGround = display.newImage(gfxRoad, 1)
 
 local imgClouds = display.newImage("clouds_t.png", display.contentCenterX, display.contentCenterY - 64)
@@ -93,44 +114,64 @@ local imgClouds2 = display.newImage("clouds_t.png", display.contentCenterX, disp
 local imgClouds3 = display.newImage("clouds_t.png", display.contentCenterX, display.contentCenterY - 64)
 
 
+local scoreText = display.newText("SCORE: " .. score, display.contentCenterX, display.contentCenterY *1.75, native.systemFont, 32)
+scoreText:setFillColor( 0.5, 0.6, 1, 0.75)
+
+-- The basket is the senor on which you score points, they look like white heads
+local basket = display.newSprite(gfxRedBasket, {basketIdle, basketChew})
+basket.x = display.contentCenterX
+basket.y = display.contentCenterY*.5
+basket:play()
+local basketType = 1
+basket:scale(2.0,2.0)
+local bBody = false
+--physics.addBody(basket, "static")
+--basket.myName = "basket"
+--basket.isSensor = true
 
 
+local rand = math.random(-35,35)
 
-
+--Pickups become pieces and look like pieces too. They "spawn" in randomly one by one
+local pickup
+local pickupZ = 0.9
+local pickupType = math.random(1,3)
+pickup = display.newImageRect("piece".. pickupType .. ".png", 32,32)
+pickup.x = display.contentCenterX + rand
+pickup.y = display.contentCenterY *.75
+--physics.addBody(pickup, "static")
+pickup:scale(0.25,0.25)
+--pickup.isSensor = true
+--pickup.isBullet = true
+pickup.myName = "pickup"
+local pickupDirection -- if the pickup is going left or right or center
+if(rand > 0) then
+	pickupDirection = 0.25
+elseif(rand < 0) then
+	pickupDirection = -0.25
+else
+	pickupDirection = 0
+end
 
 -- spriteRunner will be known as the character that the player controls
 local spriteRunner = display.newSprite(gfxRunner, sequenceData)
 spriteRunner.x = display.contentCenterX
 spriteRunner.y = display.contentCenterY	
 spriteRunner:play()
-
-
-
-
-
-local puzPiece1 = display.newRect(spriteRunner.x, spriteRunner.y, 32, 32)
-local puzPiece1z = 0
-local bInFlight = false
---physics.addBody(puzPiece1Coll, "dyanmic", {friction = 0.5, bounce = 0.5})
---puzPiece1Coll.myName = "puzzle piece"
-
-
-
-
-local basket = display.newRect(display.contentCenterX, display.contentCenterY*.5, 16,16)
-physics.addBody(basket, "static")
-basket.myName = "basket"
-basket.isSensor = true
-
-
-
 -- Make the character interact with "physics" objects
 physics.addBody(spriteRunner, "dynamic", {friction = 0.5, bounce = 0.0})
 spriteRunner.isFixedRotation = true
 spriteRunner.myName = "Runner"
 
---physics.addBody(puzPiece1, "dyanmic", {friction = 0.5, bounce = 0.0})
---puzPiece1.myName = "puzzle piece"
+--A piece is the item the player uses to throw along a vector towards the basket to score points
+--They look like gems and come in 3 varieties
+local piece = display.newImageRect( "piece1.png", 16, 16)
+piece:scale(2.0,2.0)
+piece.x = spriteRunner.x
+piece.y = spriteRunner.y
+local pieceZ = 0
+local pieceType = 1 -- 1 is red, 2 is blue, 3 is green
+local bInFlight = false -- A boolean to soo if the piece is moving in mid-air
 
 -- The purpose of funcInit() is to initialize a lot of variable and set them up to my desired effect with the
 -- ability to hide some of it away, so it does not clutter up the code
@@ -186,22 +227,39 @@ function funcInit()
 
 end
 
-
-
-
--- This bReleased is a boolean that determines whether or not 
+-- This bReleased is a boolean that determines whether or not the player has released there swipe
+-- bGround is a boolean that determines whether or not the player is on the ground
 local bReleased = true
 local bGrounded = false
 
+-- This function resets the values and positions relating to the pickup
+local function funcResetPickup()
+	pickup:removeSelf()
+	rand = math.random(-35,35)
+	pickupType = math.random(1,3)
+	pickup = display.newImageRect("piece".. pickupType .. ".png", 32,32)
+	pickup.x = display.contentCenterX + rand
+	pickup.y = display.contentCenterY *.75
+	pickupZ = 0.9
+	pickup:scale(0.25,0.25)
+	if(rand > 0) then
+		pickupDirection = 0.25
+	elseif(rand < 0) then
+		pickupDirection = -0.25
+	else
+		pickupDirection = 0
+	end
+	spriteRunner:toFront()
+	piece:toFront()
+end
 
 -- this funciton handles touch events
 function funcTouch(event)
-	
-	--local anchorY = event.y
 
+	-- THIS ALGORITHM NORMALIZES THE VECTOR ON WHICH THE PLAYER PULLS DOWN
 	local swipeLengthY = event.yStart - event.y
 	local swipeLengthX = event.xStart - event.x
-	
+
 	local xNorm = 0.0
 	local yNorm = 0.0
 
@@ -223,15 +281,13 @@ function funcTouch(event)
 		end
 	end
 
-
+	--Surpisingly this works, but there are a few edge cases which mess with the throwing
 
 	if (event.phase == "began") then
-		--if the touch has just begun we create a joint where the user clicked (coordinates of our finger)
-		--fullscreenControl = physics.newJoint("touch", fullscreenRect, event.x, event.y)
 		return true
 	elseif (event.phase == "moved") then
-		--if the touch is moving then we update the coordinates of our touch...
-		--so the box follows our finger as it moves
+
+		--Check to see if a +vertical swipe is done so the player can jump 
 		if(swipeLengthY > 0) then
 			if (bReleased == true) then
 				if (bGrounded == true) then
@@ -243,42 +299,56 @@ function funcTouch(event)
 		end
 		return true
 	elseif (event.phase == "ended" or event.phase == "cancelled") then
-		--If the touch joing has eneded or is cancelled then we remove the joint
-		--fullscreenControl:removeSelf()
-		--fullscreenControl = nil
+		--Check to see if -vertical swipe is done to throw piece along the vector
 		bReleased = true
 		if(swipeLengthY < 10) then
 			
-			
-			
 			bInFlight =  true
-			puzPiece1.y = spriteRunner.y -84
-			physics.addBody(puzPiece1, "dyanmic", {friction = 0.5, bounce = 0.0})
-			puzPiece1.myName = "puzzle piece"
-			puzPiece1.isSensor = true
-			--physics.addBody(puzPiece1Coll, "dyanmic", {friction = 0.5, bounce = 0.5})
-			puzPiece1:applyForce(5*xNorm, 5*yNorm, puzPiece1.x, puzPiece1.y)
+			piece.y = spriteRunner.y -84
+			physics.addBody(piece, "dyanmic", {friction = 0.5, bounce = 0.0})
+			piece.myName = "puzzle piece"
+			piece.isSensor = true
+			--physics.addBody(pieceColl, "dyanmic", {friction = 0.5, bounce = 0.5})
+			piece:applyForce(1.25*xNorm, 1.25*yNorm, piece.x, piece.y)
 
 		end
 		return false
 	end
 end
 
+local bResetPickup = false
 
 local function funcCollision(self, event)
 	if (event.phase == "began") then
 		if(event.other.myName == "floor") then
 			bGrounded = true
+			--If the player is touching the floor then they are on the ground
 		end
-		if((self.myName == "puzzle piece" and event.other.myName == "Runner") or (self.myName == "Runner" and event.other.myName == "puzzle piece")) then
-			event.contact.isEnabled = false
-		end
-		--print(self.myName .. " and " .. event.other.myName .. " has collidded and depth of piece is: " .. puzPiece1z)
-		if(self.myName == "puzzle piece" and event.other.myName == "basket" and  puzPiece1z >= .6) or (self.myName == "basket" and event.other.myName == "puzzle piece" and  puzPiece1z >= .6)then
-			--physics.removeBody(puzPiece1)
-			puzPiece1.isVisible = false
-			score = score + 10
+
+		if(self.myName == "basket" and event.other.myName == "puzzle piece" and  pieceZ >= .45)then
+			--If the basket collides with the piece then add points to score
+			basket:setSequence("chewing")
+			basket:play()
+			piece.isVisible = false
+			if(basketType == pieceType) then
+				-- Add 3X points for matching type
+				score = score + 30
+				scoreText.text = "SCORE: " .. score
+			else
+				score = score + 10
+				scoreText.text = "SCORE: " .. score
+			end
 			print(score)
+		end
+
+		--Check to see if the player changes pieces by colliding with a pickup
+		if(self.myName == "Runner" and event.other.myName == "pickup" and bInFlight ~= true and pickupZ <= 0.05 ) then
+
+			pieceType = pickupType
+			piece:removeSelf()
+			piece = display.newImageRect("piece".. pickupType .. ".png", 16,16)
+			piece:scale(2.0,2.0)
+			bResetPickup = true
 		end
 
 	end
@@ -291,32 +361,128 @@ local function funcCollision(self, event)
 	end
 end
 
---local totalTime = 0
 
 local function funcTester(event)
-	--print(bGrounded)
+
+	spriteRunner.isAwake = true -- Keep checking for collisions on the player
+
 	if(bInFlight == false) then
-		puzPiece1.x = spriteRunner.x
-		puzPiece1.y = spriteRunner.y
+		--Stop the piece from moving with the player
+		piece.x = spriteRunner.x
+		piece.y = spriteRunner.y
 	elseif(bInFlight == true) then 
-		puzPiece1:scale(0.99,0.99)
-		puzPiece1z = puzPiece1z + 0.01
+		--Make the piece "go farther into the distance"
+		piece:scale(0.99,0.99)
+		pieceZ = pieceZ + 0.01
 	end
 
-	spriteRunner.x = display.contentCenterX + (90 * math.sin(event.time/1000))
+	if (pieceZ >= .9) then
+		--Say goodbye once the piece has been alive for 1.5 sec
+		if(physics.removeBody(basket) ~= nil) then
+			physics.removeBody(basket)
+			bBody = false
+		end
+		piece.isVisible = false
+		physics.removeBody(piece)
+		bInFlight = false
+		pieceZ = 0.0
+	end
+	if (pieceZ >= .46 and bBody == false) then
+		physics.addBody(basket, "static")
+		basket.myName = "basket"
+		basket.isSensor = true
+		basket.collision = funcCollision
+		basket:addEventListener("collision")
+		bBody = true
+	end
+
+	if(basket.sequence == "chewing" and basket.isPlaying == false) then
+		--If the basket head guy is chewing then make it reappear somewhere else as a rand color
+		basket:removeSelf()
+		--physics.removeBody(basket)
+		local rand = math.random(1,3)
+		if (rand == 1) then 
+			basket = display.newSprite(gfxRedBasket, {basketIdle, basketChew})
+			basketType = 0
+		elseif (rand == 3) then 
+			basket = display.newSprite(gfxGreenBasket, {basketIdle, basketChew})
+			basketType = 3
+		else
+			basket = display.newSprite(gfxBlueBasket, {basketIdle, basketChew})
+			basketType = 2
+		end
+		basket:setSequence("idle")
+		basket:play()
+		basket.x = 2* math.random() * display.contentCenterX
+		basket.y = (display.contentCenterY *.5) - math.random(0,80)
+		basket:scale(2.0,2.0)
+		bBody = false
+	end
+
+	pickup:scale(1.01,1.01)
+	pickup.y = pickup.y + 0.75
+	pickup.x = pickup.x + pickupDirection
+	pickupZ = pickupZ - 0.0105
+
+	if(pickupZ <= -0.05) then -- Only add the body after the pickup has been traveling for some time
+		pickup:scale(4,4) 
+		physics.addBody(pickup, "static")
+		pickup:scale(0.25,0.25)
+		pickup.isSensor = true
+		pickup.myName = "pickup"
+	end
+	if (pickupZ <= -0.5) or (bResetPickup == true) then
+		--Reset the pickup
+		funcResetPickup()
+		bResetPickup = false
+	end
+
+	scoreText:setFillColor( 0.5, 0.6, 1, math.abs(math.sin(event.time/1000))) -- Looks cool
 
 
+
+	--ATTENTION!!!
+	--ATTENTION!!!
+	--ATTENTION!!!
+	--ATTENTION!!!
+
+	--spriteRunner.x = display.contentCenterX + (90 * math.sin(event.time/1000)) 
+
+	--ATTENTION!!!
+	--ATTENTION!!!
+	--ATTENTION!!!
+
+	--this statement is for debug purposes when on a COMPUTER!
+	--IN funcAccelerate() IS WHERE THE STATEMENT FOR ACCELEROMETER MOVEMENT IS LOCATED!
+	--IF THE PREVIOUS STATEMENT IS COMMENTED OUT YOU ARE READING CODE FOR A MOBILE DEVICE!
 end
 
 
 local function funcAccelerate( event )
-	totalTime = totalTime + event.deltaTime
-    --print( event.xGravity)
-    event.xGravity = math.sin(totalTime)
-    spriteRunner.x = display.contentCenterX + (270 * event.xGravity)
+
+
+    local accel = event.xGravity *2
+    if(accel > 1.0 ) then
+    	accel = 1.0
+    elseif (accel < -1.0) then
+    	accel = -1.0
+    end
+
+    --ATTENTION!!!
+	--ATTENTION!!!
+	--ATTENTION!!!
+
+    spriteRunner.x = display.contentCenterX + (90 * accel)
+
+    --ATTENTION!!!
+	--ATTENTION!!!
+	--ATTENTION!!!
+
+	--This statement is for gameplay when on a MOBILE DEVICE!
+	--IN funcTester() IS WHERE THE STATEMENT FOR CONSTRAINED MOVEMENT IS LOCATED!
+	--IF THE PREVIOUS STATEMENT IS COMMENTED OUT YOU ARE READING CODE FOR THE COMPUTER!
 
 end
-
 
 
 funcInit()
