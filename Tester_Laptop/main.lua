@@ -57,12 +57,12 @@ local gfxRoadOptions =
 
 local gfxRunnerOptions = 
 {
-	width = 33,
-	height = 83,
+	width = 32,
+	height = 64,
 	numFrames = 10,
 
-	sheetContentHeight = 83,
-	sheetContentWidth = 330
+	sheetContentHeight = 64,
+	sheetContentWidth = 320
 }
 
 local sequenceData =
@@ -84,7 +84,7 @@ local imgFade = display.newImage("fade.png", 0 , 0, display.contentWidth, displa
 
 local gfxRoad =  graphics.newImageSheet("path_long.png", gfxRoadOptions)
 
-local gfxRunner = graphics.newImageSheet("spritesheet_run.png",gfxRunnerOptions )
+local gfxRunner = graphics.newImageSheet("runnersheet.png",gfxRunnerOptions )
 
 local imgGround = display.newImage(gfxRoad, 1)
 
@@ -201,7 +201,7 @@ function funcTouch(event)
 
 	local swipeLengthY = event.yStart - event.y
 	local swipeLengthX = event.xStart - event.x
-
+	
 	local xNorm = 0.0
 	local yNorm = 0.0
 
@@ -216,7 +216,7 @@ function funcTouch(event)
 	else
 		if(swipeLengthY < 0) then
 			yNorm = -1.0
-			xorm = swipeLengthX/math.abs(swipeLengthY)
+			xNorm = swipeLengthX/math.abs(swipeLengthY)
 		else
 			yNorm = 1.0
 			xNorm = swipeLengthX/math.abs(swipeLengthY)
@@ -236,7 +236,7 @@ function funcTouch(event)
 			if (bReleased == true) then
 				if (bGrounded == true) then
 					
-					spriteRunner:applyForce(0,-15,spriteRunner.x, spriteRunner.y)
+					spriteRunner:applyForce(0,-10,spriteRunner.x, spriteRunner.y)
 					bReleased = false
 				end
 			end
@@ -258,6 +258,7 @@ function funcTouch(event)
 			puzPiece1.isSensor = true
 			--physics.addBody(puzPiece1Coll, "dyanmic", {friction = 0.5, bounce = 0.5})
 			puzPiece1:applyForce(5*xNorm, 5*yNorm, puzPiece1.x, puzPiece1.y)
+
 		end
 		return false
 	end
@@ -272,9 +273,9 @@ local function funcCollision(self, event)
 		if((self.myName == "puzzle piece" and event.other.myName == "Runner") or (self.myName == "Runner" and event.other.myName == "puzzle piece")) then
 			event.contact.isEnabled = false
 		end
-		print(self.myName .. " and " .. event.other.myName .. " has collidded and depth of piece is: " .. puzPiece1z)
+		--print(self.myName .. " and " .. event.other.myName .. " has collidded and depth of piece is: " .. puzPiece1z)
 		if(self.myName == "puzzle piece" and event.other.myName == "basket" and  puzPiece1z >= .6) or (self.myName == "basket" and event.other.myName == "puzzle piece" and  puzPiece1z >= .6)then
-			physics.removeBody(puzPiece1)
+			--physics.removeBody(puzPiece1)
 			puzPiece1.isVisible = false
 			score = score + 10
 			print(score)
