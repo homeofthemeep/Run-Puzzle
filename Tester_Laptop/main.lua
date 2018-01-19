@@ -16,6 +16,9 @@ physics.setGravity(0,10)
 
 kernelSetup.funcInit()
 
+local instructions = display.newImageRect("instructions.png", display.contentWidth, display.contentHeight)
+instructions.x = display.contentCenterX
+instructions.y = display.contentCenterY
 
 local score = 0
 
@@ -448,7 +451,8 @@ local function funcTester(event)
 
 	scoreText:setFillColor( 0.5, 0.6, 1, math.abs(math.sin(event.time/1000))) -- Looks cool
 
-
+	instructions.alpha = instructions.alpha - 0.0025
+	instructions:toFront()
 
 	--ATTENTION!!!
 	--ATTENTION!!!
