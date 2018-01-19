@@ -11,7 +11,7 @@ local physics = require("physics")
 local kernelSetup = require("kernelSetup")
 
 physics.start()
-physics.setDrawMode("hybrid")
+--physics.setDrawMode("hybrid")
 physics.setGravity(0,10)
 
 kernelSetup.funcInit()
@@ -281,6 +281,11 @@ function funcTouch(event)
 		end
 	end
 
+	if (math.abs(swipeLengthX) == math.abs(swipeLengthY)) then
+		xNorm = 0.0
+		yNorm = 0.0
+	end
+
 	--Surpisingly this works, but there are a few edge cases which mess with the throwing
 
 	if (event.phase == "began") then
@@ -301,7 +306,7 @@ function funcTouch(event)
 	elseif (event.phase == "ended" or event.phase == "cancelled") then
 		--Check to see if -vertical swipe is done to throw piece along the vector
 		bReleased = true
-		if(swipeLengthY < 10) then
+		if(swipeLengthY < 10 and bInFlight == false and piece.isVisible == true) then
 			
 			bInFlight =  true
 			piece.y = spriteRunner.y -84
@@ -330,15 +335,8 @@ local function funcCollision(self, event)
 			basket:setSequence("chewing")
 			basket:play()
 			piece.isVisible = false
-			if(basketType == pieceType) then
-				-- Add 3X points for matching type
-				score = score + 30
-				scoreText.text = "SCORE: " .. score
-			else
-				score = score + 10
-				scoreText.text = "SCORE: " .. score
-			end
-			print(score)
+			
+
 		end
 
 		--Check to see if the player changes pieces by colliding with a pickup
@@ -387,7 +385,7 @@ local function funcTester(event)
 		bInFlight = false
 		pieceZ = 0.0
 	end
-	if (pieceZ >= .46 and bBody == false) then
+	if (pieceZ >= .45 and bBody == false) then
 		physics.addBody(basket, "static")
 		basket.myName = "basket"
 		basket.isSensor = true
@@ -400,6 +398,17 @@ local function funcTester(event)
 		--If the basket head guy is chewing then make it reappear somewhere else as a rand color
 		basket:removeSelf()
 		--physics.removeBody(basket)
+		if(basketType == pieceType) then
+			-- Add 3X points for matching type
+			score = score + 30
+			scoreText.text = "SCORE: " .. score
+		else
+			score = score + 10
+			scoreText.text = "SCORE: " .. score
+		end
+
+		print(score)
+
 		local rand = math.random(1,3)
 		if (rand == 1) then 
 			basket = display.newSprite(gfxRedBasket, {basketIdle, basketChew})
