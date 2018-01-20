@@ -1,5 +1,0 @@
-local piece = {}
-print("Piece created")
-
-local function funcInit()
-end
