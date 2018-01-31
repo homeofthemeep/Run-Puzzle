@@ -22,17 +22,24 @@ instructions.y = display.contentCenterY
 
 local score = 0
 
-
---local strTester = "intVar = " .. intVar	.. "\nfloatVar = " .. floatVar
-
 -- floorRect will be the collidable floor that the player interacts with
 local floorRect = display.newRect(display.contentCenterX, display.contentCenterY + 35, 300, 1)
 floorRect.isVisible = false
+local leftRect = display.newRect(display.contentCenterX-90, 150, 1, 300)
+leftRect.isVisible = false
+local rightRect = display.newRect(display.contentCenterX+90, 150, 1, 300)
+rightRect.isVisible = false
+
 
 -- Setup for the floor rectangle
 physics.addBody(floorRect, "static", {friction = 0.5, bounce = 0.0})
 floorRect.myName = "floor"
 
+--physics.addBody(leftRect, "static", {friction = 0.5, bounce = 0.0})
+--leftRect.myName = "left wall"
+
+--physics.addBody(rightRect, "static", {friction = 0.5, bounce = 0.0})
+--rightRect.myName = "right wall"
 -- Setup options for imgGround texture, player's spritesheet, and the sequence for the player's running animation
 local gfxRoadOptions =
 {
@@ -68,12 +75,12 @@ local sequenceData =
 
 local gfxBasketOptions = 
 {
-	width = 16,
-	height = 24,
-	numFrames = 5,
+	width = 64,
+	height = 96,
+	numFrames = 25,
 
-	sheetContentHeight = 24,
-	sheetContentWidth = 80
+	sheetContentHeight = 96,
+	sheetContentWidth = 1600
 }
 
 local basketIdle =
@@ -86,15 +93,76 @@ local basketIdle =
     loopDirection = "forward"    -- Optional ; values include "forward" or "bounce"
 }
 
-local basketChew = 
+local basketChewR = 
 {
-    name="chewing",
+    name="chewing_r",
     start=2,
-    count=4,
-    time=500,
-    loopCount = 2,   -- Optional ; default is 0 (loop indefinitely)
+    count=8,
+    time=1000,
+    loopCount = 1,   -- Optional ; default is 0 (loop indefinitely)
     loopDirection = "forward"    -- Optional ; values include "forward" or "bounce"
 }
+
+local basketChewB = 
+{
+    name="chewing_b",
+    start=10,
+    count=8,
+    time=1000,
+    loopCount = 1,   -- Optional ; default is 0 (loop indefinitely)
+    loopDirection = "forward"    -- Optional ; values include "forward" or "bounce"
+}
+
+local basketChewG = 
+{
+    name="chewing_g",
+    start=17,
+    count=8,
+    time=1000,
+    loopCount = 1,   -- Optional ; default is 0 (loop indefinitely)
+    loopDirection = "forward"    -- Optional ; values include "forward" or "bounce"
+}
+
+local gfxBombOptions = 
+{
+	width = 32,
+	height = 32,
+	numFrames = 15,
+
+	sheetContentHeight = 32,
+	sheetContentWidth = 480
+}
+
+local bombIdle  = 
+{
+	name="idle",
+    start=1,
+    count=1,
+    time=1,
+    loopCount = 0,   -- Optional ; default is 0 (loop indefinitely)
+    loopDirection = "forward"    -- Optional ; values include "forward" or "bounce"
+}
+
+local bombPrimed  = 
+{
+	name="primed",
+    start=2,
+    count=7,
+    time=800,
+    loopCount = 1,   -- Optional ; default is 0 (loop indefinitely)
+    loopDirection = "forward"    -- Optional ; values include "forward" or "bounce"
+}
+
+local bombExplode = 
+{
+	name="boom",
+    start=9,
+    count=7,
+    time=500,
+    loopCount = 1,   -- Optional ; default is 0 (loop indefinitely)
+    loopDirection = "forward"    -- Optional ; values include "forward" or "bounce"
+}
+
 
 -- Add these images in
 local imgBG = display.newImage("sbackground.png", 0,0, display.contentWidth, display.contentHeight)
@@ -105,10 +173,11 @@ local gfxRoad =  graphics.newImageSheet("path_long.png", gfxRoadOptions)
 
 local gfxRunner = graphics.newImageSheet("runnersheet.png",gfxRunnerOptions )
 
-local gfxRedBasket = graphics.newImageSheet("chewsheet_r.png", gfxBasketOptions)
-local gfxGreenBasket = graphics.newImageSheet("chewsheet_g.png", gfxBasketOptions)
-local gfxBlueBasket = graphics.newImageSheet("chewsheet_b.png", gfxBasketOptions)
+local gfxRedBasket = graphics.newImageSheet("headsheet_r.png", gfxBasketOptions)
+local gfxGreenBasket = graphics.newImageSheet("headsheet_g.png", gfxBasketOptions)
+local gfxBlueBasket = graphics.newImageSheet("headsheet_b.png", gfxBasketOptions)
 
+local gfxBombSheet = graphics.newImageSheet("bombsheet.png", gfxBombOptions)
 
 local imgGround = display.newImage(gfxRoad, 1)
 
@@ -121,16 +190,15 @@ local scoreText = display.newText("SCORE: " .. score, display.contentCenterX, di
 scoreText:setFillColor( 0.5, 0.6, 1, 0.75)
 
 -- The basket is the senor on which you score points, they look like white heads
-local basket = display.newSprite(gfxRedBasket, {basketIdle, basketChew})
+local basket = display.newSprite(gfxRedBasket, {basketIdle, basketChewR, basketChewB, basketChewG})
 basket.x = display.contentCenterX
 basket.y = display.contentCenterY*.5
+local basketBox = display.newRect(basket.x, basket.y, 32,48)
+basketBox.isVisible = false
 basket:play()
 local basketType = 1
-basket:scale(2.0,2.0)
+basket:scale(0.5,0.5)
 local bBody = false
---physics.addBody(basket, "static")
---basket.myName = "basket"
---basket.isSensor = true
 
 
 local rand = math.random(-35,35)
@@ -139,13 +207,10 @@ local rand = math.random(-35,35)
 local pickup
 local pickupZ = 0.9
 local pickupType = math.random(1,3)
-pickup = display.newImageRect("piece".. pickupType .. ".png", 32,32)
+pickup = display.newImageRect("piece".. pickupType .. "_hd.png", 32,32)
 pickup.x = display.contentCenterX + rand
 pickup.y = display.contentCenterY *.75
---physics.addBody(pickup, "static")
 pickup:scale(0.25,0.25)
---pickup.isSensor = true
---pickup.isBullet = true
 pickup.myName = "pickup"
 local pickupDirection -- if the pickup is going left or right or center
 if(rand > 0) then
@@ -156,19 +221,44 @@ else
 	pickupDirection = 0
 end
 
+
+
+
+local bombA = display.newSprite(gfxBombSheet, {bombIdle, bombPrimed, bombExplode})
+bombA:scale(0.25,0.25)
+bombA:setSequence("idle") 
+bombA:play()
+local bombAZ = 0.9
+rand = math.random(-35,35)
+bombA.x = display.contentCenterX + rand
+bombA.y = display.contentCenterY *.75
+local bombABox = display.newRect(bombA.x, bombA.y, 32,32)
+bombABox.isVisible = false
+bombABox.x = bombA.x
+bombABox.y = bombA.y
+local bombADirection -- if the pickup is going left or right or center
+if(rand > 0) then
+	bombADirection = 0.25
+elseif(rand < 0) then
+	bombADirection = -0.25
+else
+	bombADirection = 0
+end
+
+
 -- spriteRunner will be known as the character that the player controls
 local spriteRunner = display.newSprite(gfxRunner, sequenceData)
 spriteRunner.x = display.contentCenterX
 spriteRunner.y = display.contentCenterY	
 spriteRunner:play()
 -- Make the character interact with "physics" objects
-physics.addBody(spriteRunner, "dynamic", {friction = 0.5, bounce = 0.0})
+physics.addBody(spriteRunner, "dynamic", {friction = 10, bounce = 0.0})
 spriteRunner.isFixedRotation = true
 spriteRunner.myName = "Runner"
 
 --A piece is the item the player uses to throw along a vector towards the basket to score points
 --They look like gems and come in 3 varieties
-local piece = display.newImageRect( "piece1.png", 16, 16)
+local piece = display.newImageRect( "piece1_hd.png", 16, 16)
 piece:scale(2.0,2.0)
 piece.x = spriteRunner.x
 piece.y = spriteRunner.y
@@ -240,7 +330,7 @@ local function funcResetPickup()
 	pickup:removeSelf()
 	rand = math.random(-35,35)
 	pickupType = math.random(1,3)
-	pickup = display.newImageRect("piece".. pickupType .. ".png", 32,32)
+	pickup = display.newImageRect("piece".. pickupType .. "_hd.png", 32,32)
 	pickup.x = display.contentCenterX + rand
 	pickup.y = display.contentCenterY *.75
 	pickupZ = 0.9
@@ -252,6 +342,31 @@ local function funcResetPickup()
 	else
 		pickupDirection = 0
 	end
+	spriteRunner:toFront()
+	piece:toFront()
+end
+
+local function funcResetBombA()
+	physics.removeBody(bombABox)
+	bombA:removeSelf()
+	bombA = display.newSprite(gfxBombSheet, {bombIdle, bombPrimed, bombExplode})
+	rand = math.random(-35,35)
+	bombA:setSequence("idle") 
+	bombA:play()
+	bombA.x = display.contentCenterX + rand
+	bombA.y = display.contentCenterY *.75
+	bombAZ = 0.9
+	bombA:scale(0.25,0.25)
+	if(rand > 0) then
+		bombADirection = 0.25
+	elseif(rand < 0) then
+		bombADirection = -0.25
+	else
+		bombADirection = 0
+	end
+
+	bombABox.x = bombA.x
+	bombABox.y = bombA.y
 	spriteRunner:toFront()
 	piece:toFront()
 end
@@ -335,21 +450,29 @@ local function funcCollision(self, event)
 
 		if(self.myName == "basket" and event.other.myName == "puzzle piece" and  pieceZ >= .45)then
 			--If the basket collides with the piece then add points to score
-			basket:setSequence("chewing")
+			if(pieceType == 1) then
+				basket:setSequence("chewing_r")
+			elseif(pieceType == 2) then
+				basket:setSequence("chewing_b")
+			else
+				basket:setSequence("chewing_g")
+			end
 			basket:play()
-			piece.isVisible = false
-			
-
+			piece.isVisible = false			
 		end
 
 		--Check to see if the player changes pieces by colliding with a pickup
 		if(self.myName == "Runner" and event.other.myName == "pickup" and bInFlight ~= true and pickupZ <= 0.05 ) then
-
 			pieceType = pickupType
 			piece:removeSelf()
-			piece = display.newImageRect("piece".. pickupType .. ".png", 16,16)
+			piece = display.newImageRect("piece".. pickupType .. "_hd.png", 16,16)
 			piece:scale(2.0,2.0)
 			bResetPickup = true
+		end
+
+		if(self.myName == "Runner" and event.other.myName == "bomb" and bombAZ <= 0.05 ) then
+			score = score - 30
+			scoreText.text = "SCORE: " .. score
 		end
 
 	end
@@ -379,8 +502,8 @@ local function funcTester(event)
 
 	if (pieceZ >= .9) then
 		--Say goodbye once the piece has been alive for 1.5 sec
-		if(physics.removeBody(basket) ~= nil) then
-			physics.removeBody(basket)
+		if(physics.removeBody(basketBox) ~= nil) then
+			physics.removeBody(basketBox)
 			bBody = false
 		end
 		piece.isVisible = false
@@ -389,15 +512,15 @@ local function funcTester(event)
 		pieceZ = 0.0
 	end
 	if (pieceZ >= .45 and bBody == false) then
-		physics.addBody(basket, "static")
-		basket.myName = "basket"
-		basket.isSensor = true
-		basket.collision = funcCollision
-		basket:addEventListener("collision")
+		physics.addBody(basketBox, "static")
+		basketBox.myName = "basket"
+		basketBox.isSensor = true
+		basketBox.collision = funcCollision
+		basketBox:addEventListener("collision")
 		bBody = true
 	end
 
-	if(basket.sequence == "chewing" and basket.isPlaying == false) then
+	if((basket.sequence == "chewing_r" or  basket.sequence == "chewing_b" or basket.sequence == "chewing_g" )and basket.isPlaying == false) then
 		--If the basket head guy is chewing then make it reappear somewhere else as a rand color
 		basket:removeSelf()
 		--physics.removeBody(basket)
@@ -414,20 +537,22 @@ local function funcTester(event)
 
 		local rand = math.random(1,3)
 		if (rand == 1) then 
-			basket = display.newSprite(gfxRedBasket, {basketIdle, basketChew})
+			basket = display.newSprite(gfxRedBasket, {basketIdle, basketChewR, basketChewB, basketChewG})
 			basketType = 0
 		elseif (rand == 3) then 
-			basket = display.newSprite(gfxGreenBasket, {basketIdle, basketChew})
+			basket = display.newSprite(gfxGreenBasket, {basketIdle, basketChewR, basketChewB, basketChewG})
 			basketType = 3
 		else
-			basket = display.newSprite(gfxBlueBasket, {basketIdle, basketChew})
+			basket = display.newSprite(gfxBlueBasket, {basketIdle, basketChewR, basketChewB, basketChewG})
 			basketType = 2
 		end
 		basket:setSequence("idle")
 		basket:play()
 		basket.x = 2* math.random() * display.contentCenterX
-		basket.y = (display.contentCenterY *.5) - math.random(0,80)
-		basket:scale(2.0,2.0)
+		basket.y = (display.contentCenterY *.5) - math.random(0,100)
+		basket:scale(0.5,0.5)
+		basketBox.x = basket.x
+		basketBox.y = basket.y
 		bBody = false
 	end
 
@@ -447,6 +572,36 @@ local function funcTester(event)
 		--Reset the pickup
 		funcResetPickup()
 		bResetPickup = false
+	end
+
+	bombA:scale(1.0125,1.0125)
+	bombA.y = bombA.y + 0.75
+	bombA.x = bombA.x + bombADirection
+	bombAZ = bombAZ - 0.0105
+	bombABox.x = bombA.x
+	bombABox.y = bombA.y
+
+
+	--if(bombAZ <= 0.076) then -- Only add the body after the pickup has been traveling for some time
+	if(bombAZ <= 0.454 and bombA.sequence == "idle") then
+		--print("reached primed")
+		bombA:setSequence("primed") 
+		bombA:play()
+	end
+	if(bombAZ <= -0.05 and bombA.sequence == "primed") then -- Only add the body after the pickup has been traveling for some time
+		--bombA:scale(4,4) 
+		bombA:setSequence("boom") 
+		bombA:play()
+		physics.addBody(bombABox, "static")
+		--pickup:scale(0.25,0.25)
+		bombABox.isSensor = true
+		bombABox.myName = "bomb"
+	end
+	if (bombAZ <= -0.5) then
+		--Reset the pickup
+		funcResetBombA()
+		--bResetPickup = false
+		
 	end
 
 	scoreText:setFillColor( 0.5, 0.6, 1, math.abs(math.sin(event.time/1000))) -- Looks cool
@@ -474,7 +629,7 @@ end
 local function funcAccelerate( event )
 
 
-    local accel = event.xGravity *2
+    local accel = event.xGravity*2
     if(accel > 1.0 ) then
     	accel = 1.0
     elseif (accel < -1.0) then
@@ -485,7 +640,15 @@ local function funcAccelerate( event )
 	--ATTENTION!!!
 	--ATTENTION!!!
 
-    spriteRunner.x = display.contentCenterX + (90 * accel)
+    --spriteRunner.x = display.contentCenterX + (90 * accel)
+
+
+    transition.to(spriteRunner,{time = 67 , x = display.contentCenterX + (90 * accel)})
+
+    --if(bGrounded == true) then
+    	--spriteRunner:setLinearVelocity(accel*2000, 0)
+    --end
+
 
     --ATTENTION!!!
 	--ATTENTION!!!
@@ -507,4 +670,4 @@ basket:addEventListener("collision")
 
 Runtime:addEventListener("touch", funcTouch)
 Runtime:addEventListener("enterFrame", funcTester)
-Runtime:addEventListener( "accelerometer", funcAccelerate )
+Runtime:addEventListener( "accelerometer", funcAccelerate )local kernel = {category = "filter", name = "uv_scroll"}
